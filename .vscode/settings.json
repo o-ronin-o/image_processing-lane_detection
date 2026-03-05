@@ -1,0 +1,29 @@
+{
+    // Keep suggestions but make them less intrusive
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": false,
+        "strings": false
+    },
+    
+    // Increase delay before suggestions appear
+    "editor.quickSuggestionsDelay": 1000,  // 1 second delay
+    
+    // Only trigger suggestions with Ctrl+Space
+    "editor.suggestOnTriggerCharacters": false,
+    
+    // Don't automatically select a suggestion
+    "editor.suggestSelection": "manual",
+    
+    // Keep word suggestions but don't show them automatically
+    "editor.wordBasedSuggestions": "off",
+    
+    // Disable parameter hints (often annoying)
+    "editor.parameterHints.enabled": false,
+    
+    // Control how Enter key behaves
+    "editor.acceptSuggestionOnEnter": "off",
+    
+    // Keep inline suggestions off
+    "editor.inlineSuggest.enabled": false
+}
