@@ -32,25 +32,21 @@ def detect_edges(image, low_threshold=50, high_threshold=150):
 
 
 def region_of_interest(edges, vertices=None):
-    """
-    Mask the edge image so that only the road region is kept.
-    """
     h, w = edges.shape[:2]
 
     if vertices is None:
-        # Default trapezoid covering the lower half of the frame
         vertices = np.array([[
-            (0,          h),               # bottom-left
-            (w * 0.45,   h * 0.6),         # top-left
-            (w * 0.55,   h * 0.6),         # top-right
-            (w,          h),               # bottom-right
+            (w * 0.00, h * 1.00),   # bottom-left  (road starts here)
+            (w * 0.00, h * 0.20),   # top-left     (flush with image edge)
+            (w * 0.60, h * 0.20),   # top-right    (near vanishing point)
+            (w * 0.75, h * 0.65),   # mid-right    (cut out bottom-right grass)
+            (w * 0.60, h * 1.00),   # bottom-right (avoid far-right grass)
         ]], dtype=np.int32)
 
     mask = np.zeros_like(edges)
     cv2.fillPoly(mask, vertices, 255)
     masked_edges = cv2.bitwise_and(edges, mask)
     return masked_edges
-
 
 def hough_accumulate(edges, theta_res=1, rho_res=1):
     """
@@ -120,16 +116,12 @@ def non_max_suppression(accumulator, neighborhood=10):
 
 
 def find_peaks(accumulator, thetas, rhos, threshold=None, num_peaks=10):
-    """
-    Extract the strongest (ρ, θ) peaks from the (suppressed) accumulator.
-    """
     if threshold is None:
-        threshold = int(accumulator.max() * 0.5)
-
+        threshold = int(accumulator.max() * 0.3)  
     peaks = []
     acc = accumulator.copy()
 
-    for _ in range(num_peaks):
+    for i in range(num_peaks):
         idx   = np.unravel_index(np.argmax(acc), acc.shape)
         votes = acc[idx]
         if votes < threshold:
@@ -137,7 +129,7 @@ def find_peaks(accumulator, thetas, rhos, threshold=None, num_peaks=10):
         rho   = rhos[idx[0]]
         theta = thetas[idx[1]]
         peaks.append((rho, theta, votes))
-        acc[idx] = 0                # zero the peak so next argmax finds next one
+        acc[idx] = 0
 
     return peaks
 
@@ -168,13 +160,6 @@ def draw_lines(image, peaks, color=(0, 255, 0), thickness=3):
 def plot_accumulator(accumulator, thetas, rhos, title="Hough Accumulator (ρ-θ space)"):
     """
     Display the Hough accumulator array as a heat-map.
-
-    Parameters
-    ----------
-    accumulator : ndarray  Vote array.
-    thetas      : ndarray  Angle values (radians) – used as x-axis labels.
-    rhos        : ndarray  ρ values – used as y-axis labels.
-    title       : str      Plot title.
     """
     plt.figure(figsize=(12, 6))
     plt.imshow(
@@ -234,7 +219,7 @@ def lane_detection_pipeline(image_path, roi_vertices=None,
     plot_accumulator(accumulator, thetas, rhos)
 
     # ── 7. Non-maximum suppression ────────────────────────────────────────────
-    suppressed = non_max_suppression(accumulator, neighborhood=10)
+    suppressed = non_max_suppression(accumulator, neighborhood=5)
 
     # ── 8. Peak extraction ────────────────────────────────────────────────────
     peaks = find_peaks(suppressed, thetas, rhos,
@@ -276,7 +261,8 @@ if __name__ == "__main__":
         image_path="road.png",      
         canny_low=50,
         canny_high=150,
-        num_peaks=10,
+        num_peaks=8,
+        hough_threshold=15
     )
     cv2.imwrite("lane_detection_output.png", result)
     print("Saved result to lane_detection_output.png")
